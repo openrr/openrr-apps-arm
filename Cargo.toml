@@ -5,5 +5,34 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+ros = ["arci-ros"]
+ros2 = ["arci-ros2"]
+
 [dependencies]
+arci = { version = "0.0.7" }
+arci-ros = { version = "0.0.7", optional = true }
+arci-ros2 = { version = "0.0.7", optional = true, features = ["ros2"] }
+arci-urdf-viz = { version = "0.0.7" }
+clap = { version = "4.1", features = ["derive"] }
+k = "0.29.1"
 openrr-planner = "0.0.7"
+tokio = { version = "1.22", features = ["full"] }
+urdf-rs = "0.6.8"
+urdf-viz = "0.41.0"
+
+[[bin]]
+name = "uviz_arm"
+path = "src/bin/uviz_arm.rs"
+
+[[bin]]
+name = "ros_arm"
+path = "src/bin/ros_arm.rs"
+
+[[bin]]
+name = "ros2_arm"
+path = "src/bin/ros2_arm.rs"
+
+[[bin]]
+name = "arm"
+path = "src/bin/arm.rs"
