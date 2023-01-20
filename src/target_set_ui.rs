@@ -26,7 +26,7 @@ const AXIS_CYLINDER_SIZE: f32 = 0.3;
 
 // Implement like openrr-planner reach example (CollisionAvoidApp).
 // https://github.com/openrr/openrr/blob/main/openrr-planner/examples/reach.rs
-pub struct UrdfVizPlanner<J>
+pub struct TargetSetUI<J>
 where
     J: JointTrajectoryClient,
 {
@@ -42,7 +42,7 @@ where
     arm_controller: ArmController<J>,
 }
 
-impl<J> UrdfVizPlanner<J>
+impl<J> TargetSetUI<J>
 where
     J: JointTrajectoryClient,
 {

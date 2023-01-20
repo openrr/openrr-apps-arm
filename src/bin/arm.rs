@@ -5,7 +5,7 @@ use arci_ros2::*;
 #[cfg(not(any(feature = "ros", feature = "ros2")))]
 use arci_urdf_viz::UrdfVizWebClient;
 use clap::Parser;
-use openrr_apps_arm::{argument::CmdArgument, urdf_viz_planner::UrdfVizPlanner};
+use openrr_apps_arm::{argument::CmdArgument, target_set_ui::TargetSetUI};
 
 #[tokio::main]
 async fn main() {
@@ -46,7 +46,7 @@ async fn main() {
         std::process::exit(0x0100);
     });
 
-    let mut uviz_planner = UrdfVizPlanner::new(client, &arg.urdf_path, &arg.end_link_name);
+    let mut ui = TargetSetUI::new(client, &arg.urdf_path, &arg.end_link_name);
 
-    uviz_planner.run();
+    ui.run();
 }

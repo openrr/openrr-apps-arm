@@ -3,7 +3,7 @@
 async fn main() {
     use arci_ros2::*;
     use clap::Parser;
-    use openrr_apps_arm::{argument::CmdArgument, urdf_viz_planner::UrdfVizPlanner};
+    use openrr_apps_arm::{argument::CmdArgument, target_set_ui::TargetSetUI};
 
     let arg = CmdArgument::parse();
 
@@ -11,9 +11,9 @@ async fn main() {
     let action_name = "/lite6_traj_controller";
     let ros2_client = Ros2ControlClient::new(ctx, action_name);
 
-    let mut uviz_planner = UrdfVizPlanner::new(ros2_client, &arg.urdf_path, &arg.end_link_name);
+    let mut ui = TargetSetUI::new(ros2_client, &arg.urdf_path, &arg.end_link_name);
 
-    uviz_planner.run();
+    ui.run();
 }
 
 #[cfg(not(feature = "ros2"))]
