@@ -1,8 +1,8 @@
-# Robotics Arm Controller Application by OpenRR
+# Robotic Arm Controller Application by OpenRR
 
 ## Overview
 
-This project is to use a robotics arm using OpenRR without openrr-apps.
+This project is to use a robotic arm using OpenRR without openrr-apps.
 
 ## Usage
 
