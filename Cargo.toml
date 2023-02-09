@@ -16,6 +16,7 @@ arci-ros2 = { version = "0.0.7", optional = true, features = ["ros2"] }
 arci-urdf-viz = { version = "0.0.7" }
 clap = { version = "4.1", features = ["derive"] }
 k = "0.29.1"
+openrr-client = "0.0.7"
 openrr-planner = "0.0.7"
 tokio = { version = "1.22", features = ["full"] }
 urdf-rs = "0.6.8"

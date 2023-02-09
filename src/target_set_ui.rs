@@ -1,8 +1,8 @@
 use std::{path::Path, sync::Arc};
 
-use crate::arm_controller::ArmController;
 use arci::JointTrajectoryClient;
-use k::{nalgebra as na, JacobianIkSolver};
+use k::{nalgebra as na, Constraints, JacobianIkSolver};
+use openrr_client::{IkClient, IkSolverWithChain};
 use openrr_planner::{JointPathPlannerBuilder, JointPathPlannerWithIk, RandomInitializeIkSolver};
 use urdf_viz::{
     kiss3d::{ncollide3d::shape::Compound, window::Window},
@@ -36,10 +36,9 @@ where
     init_ik_target_pose: na::Isometry3<f64>,
     viewer: Viewer,
     window: Window,
-    arm: k::SerialChain<f64>,
     end_link_name: String,
     reference_robot: Arc<k::Chain<f64>>,
-    arm_controller: ArmController<J>,
+    ik_client: IkClient<J>,
 }
 
 impl<J> TargetSetUI<J>
@@ -48,16 +47,16 @@ where
 {
     pub fn new(client: J, urdf_path: &Path, end_link_name: &str) -> Self {
         let reference_robot = Arc::new(k::Chain::from_urdf_file(urdf_path).unwrap());
-        let planner = JointPathPlannerBuilder::from_urdf_file(urdf_path)
-            .unwrap()
-            .collision_check_margin(0.01)
-            .reference_robot(reference_robot.clone())
-            .finalize()
-            .unwrap();
 
-        let solver = JacobianIkSolver::new(0.001, 0.005, 0.2, 100);
-        let solver = RandomInitializeIkSolver::new(solver, 100);
-        let planner = JointPathPlannerWithIk::new(planner, solver);
+        let planner = JointPathPlannerWithIk::new(
+            JointPathPlannerBuilder::from_urdf_file(urdf_path)
+                .unwrap()
+                .collision_check_margin(0.01)
+                .reference_robot(reference_robot.clone())
+                .finalize()
+                .unwrap(),
+            RandomInitializeIkSolver::new(JacobianIkSolver::new(0.001, 0.005, 0.2, 100), 100),
+        );
 
         let (mut viewer, mut window) = urdf_viz::Viewer::new("OpenRR Apps Arm");
         let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(urdf_path).unwrap();
@@ -77,12 +76,16 @@ where
         viewer.add_axis_cylinders(&mut window, "origin", AXIS_CYLINDER_SIZE);
         viewer.add_axis_cylinders(&mut window, "ik_target", AXIS_CYLINDER_SIZE);
 
-        let arm_controller = ArmController::new(client);
-
-        let init_pose = arm_controller.get_feedback();
-        arm.set_joint_positions_clamped(&init_pose);
         let ik_target_pose = arm.end_transform();
         let init_ik_target_pose = ik_target_pose;
+
+        let ik_solver =
+            RandomInitializeIkSolver::new(JacobianIkSolver::new(0.001, 0.005, 0.2, 100), 100);
+
+        let ik_solver_with_chain =
+            IkSolverWithChain::new(arm, Arc::new(ik_solver), Constraints::default());
+
+        let ik_client = IkClient::new(client, Arc::new(ik_solver_with_chain));
 
         Self {
             planner,
@@ -91,10 +94,9 @@ where
             init_ik_target_pose,
             viewer,
             window,
-            arm,
             end_link_name,
             reference_robot,
-            arm_controller,
+            ik_client,
         }
     }
 
@@ -123,7 +125,7 @@ where
     }
 
     fn set_ik_target_to_eef(&mut self) {
-        self.ik_target_pose = self.arm.end_transform();
+        self.ik_target_pose = self.ik_client.current_end_transform().unwrap();
         self.update_ik_target();
     }
 
@@ -141,9 +143,12 @@ where
             self.run_default_viewer_task();
             if !plans.is_empty() {
                 let positions = &plans.pop().unwrap();
-                self.arm.set_joint_positions_clamped(positions);
+                self.ik_client.set_joint_positions_clamped(positions);
                 self.update_viewer();
-                let _ = self.arm_controller.run(positions);
+                let _wf = self
+                    .ik_client
+                    .send_joint_positions(positions.clone(), std::time::Duration::from_millis(100))
+                    .unwrap();
             }
             std::thread::sleep(std::time::Duration::from_millis(10));
             for event in self.window.events().iter() {
@@ -234,7 +239,8 @@ where
                             self.update_ik_target();
                         }
                         Key::G => {
-                            let initial_joint_positions = self.arm.joint_positions();
+                            let initial_joint_positions =
+                                self.ik_client.current_joint_positions().unwrap();
 
                             let result = self.planner.plan_with_ik(
                                 &self.end_link_name,
